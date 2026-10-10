@@ -38,7 +38,7 @@ def test_writes_all_files_with_expected_shapes(tmp_path):
     card = (tmp_path / "README.md").read_text(encoding="utf-8")
     assert "{{" not in card
     assert "| train | 8 |" in card
-    assert 'load_dataset("HF_USER/deeponet-ode-data")' in card
+    assert 'load_dataset("tha2002-tech/deeponet-ode-data")' in card
 
 
 def test_push_without_token_exits_before_touching_hub(tmp_path, monkeypatch):

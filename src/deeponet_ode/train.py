@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 from deeponet_ode.data import COLUMNS, load_split  # noqa: E402
 from deeponet_ode.model import DeepONet, make_branch_input, relative_l2  # noqa: E402
 
-DEFAULT_DATASET = "HF_USER/deeponet-ode-data"
+DEFAULT_DATASET = "tha2002-tech/deeponet-ode-data"
 
 
 def columns_to_tensors(cols: dict[str, Sequence]) -> dict[str, torch.Tensor]:

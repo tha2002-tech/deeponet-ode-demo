@@ -20,7 +20,7 @@ from deeponet_ode import data as D
 
 ROOT = Path(__file__).resolve().parents[1]
 CARD_TEMPLATE = ROOT / "dataset_card" / "README.md"
-DEFAULT_REPO = "HF_USER/deeponet-ode-data"
+DEFAULT_REPO = "tha2002-tech/deeponet-ode-data"
 
 
 def git_commit() -> str:
