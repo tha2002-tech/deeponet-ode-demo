@@ -62,6 +62,11 @@ Code that generates this dataset and trains a DeepONet on it:
 - Seed {{SEED}} for train, seed {{SEED}}+1 for test.
 - Produced by `scripts/generate_data.py` at commit `{{GIT_COMMIT}}` of the
   repository above. `metadata.json` in this repo records all parameters.
+- Reproducibility: the same seed regenerates these files byte-for-byte on the
+  same numpy/LAPACK build (eigenvector signs are canonicalized, so other builds
+  should agree to floating-point rounding); if not, the regenerated data is
+  equal in distribution. `metadata.json` records the numpy version and platform
+  used.
 
 ## Usage
 

@@ -68,6 +68,10 @@ python scripts/generate_data.py --push --repo YOUR_USER/deeponet-ode-data
   parameter and the sensor grid.
 - `train.py` defaults to the Hub dataset id, so a fresh clone trains with no
   manual data step.
+- Reproducibility: `scripts/generate_data.py` regenerates the published files
+  byte-for-byte on the same numpy/LAPACK build. Eigenvector signs of the
+  random-field factor are canonicalized, so other builds should agree to
+  floating-point rounding; failing that, the data is equal in distribution.
 
 ## Development
 

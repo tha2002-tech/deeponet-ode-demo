@@ -100,3 +100,16 @@ def test_parquet_is_byte_identical_for_same_seed(tmp_path):
     for i in range(2):
         save_split(make_split(np.random.default_rng(9), 5), tmp_path / f"{i}.parquet")
     assert (tmp_path / "0.parquet").read_bytes() == (tmp_path / "1.parquet").read_bytes()
+
+
+from deeponet_ode.data import grf_factor, rbf_kernel  # noqa: E402
+
+
+def test_grf_factor_has_canonical_eigenvector_signs():
+    """eigh eigenvector signs differ between BLAS builds; the factor must not depend on them."""
+    tf = fine_grid()
+    factor = grf_factor(rbf_kernel(tf, tf, 0.2))
+    assert factor.shape == (tf.size, tf.size)
+    idx = np.abs(factor).argmax(axis=0)
+    assert (factor[idx, np.arange(factor.shape[1])] >= 0).all()
+    np.testing.assert_allclose(factor @ factor.T, rbf_kernel(tf, tf, 0.2), atol=1e-10)

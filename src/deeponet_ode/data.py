@@ -38,18 +38,28 @@ def rbf_kernel(x: np.ndarray, y: np.ndarray, length_scale: float) -> np.ndarray:
     return np.exp(-0.5 * (d / length_scale) ** 2)
 
 
+def grf_factor(cov: np.ndarray) -> np.ndarray:
+    """Matrix F with F @ F.T == cov, built from a symmetric eigendecomposition.
+
+    Negative eigenvalues (numerical noise; the RBF kernel on ~1000 points is singular)
+    are clipped to zero. Each eigenvector's sign is canonicalized so that its
+    largest-magnitude component is positive: LAPACK implementations are free to
+    return either sign, and without this step the same seed would give a different
+    realization on a different BLAS build.
+    """
+    eigvals, eigvecs = np.linalg.eigh(cov)
+    pivot = np.abs(eigvecs).argmax(axis=0)
+    signs = np.sign(eigvecs[pivot, np.arange(eigvecs.shape[1])])
+    signs[signs == 0] = 1.0
+    eigvecs = eigvecs * signs
+    return eigvecs * np.sqrt(np.clip(eigvals, 0.0, None))
+
+
 def sample_grf(
     rng: np.random.Generator, n: int, grid: np.ndarray, length_scale: float = LENGTH_SCALE
 ) -> np.ndarray:
-    """n samples of a zero-mean, unit-variance Gaussian random field with an RBF kernel.
-
-    Uses a symmetric eigendecomposition with negative eigenvalues clipped to zero.
-    The RBF kernel on ~1000 points is numerically singular, so Cholesky would need
-    a large jitter; clipping gives samples with the same distribution.
-    """
-    cov = rbf_kernel(grid, grid, length_scale)
-    eigvals, eigvecs = np.linalg.eigh(cov)
-    factor = eigvecs * np.sqrt(np.clip(eigvals, 0.0, None))
+    """n samples of a zero-mean, unit-variance Gaussian random field with an RBF kernel."""
+    factor = grf_factor(rbf_kernel(grid, grid, length_scale))
     z = rng.standard_normal((n, grid.size))
     return z @ factor.T
 

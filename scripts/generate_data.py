@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import platform
 import subprocess
 import sys
 from pathlib import Path
@@ -66,6 +67,9 @@ def write_dataset(out: Path, n_train: int, n_test: int, seed: int, repo: str) ->
         "generator": "scripts/generate_data.py",
         "github": "https://github.com/tha2002-tech/deeponet-ode-demo",
         "git_commit": git_commit(),
+        "numpy_version": np.__version__,
+        "python_version": platform.python_version(),
+        "platform": platform.platform(),
     }
     (out / "metadata.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
     (out / "README.md").write_text(render_card(repo, n_train, n_test, seed), encoding="utf-8")
