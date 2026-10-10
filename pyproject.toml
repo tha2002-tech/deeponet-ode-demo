@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deeponet-ode"
+version = "0.1.0"
+description = "DeepONet for the linear first-order ODE u' = -k u + f, with data on the Hugging Face Hub"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = [
+  "torch>=2.2",
+  "numpy>=1.26",
+  "pandas>=2.0",
+  "pyarrow>=14",
+  "matplotlib>=3.8",
+  "datasets>=2.19",
+  "huggingface_hub>=0.23",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
