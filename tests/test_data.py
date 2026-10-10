@@ -1,0 +1,72 @@
+import numpy as np
+import pytest
+
+from deeponet_ode.data import (
+    fine_grid,
+    make_split,
+    sample_grf,
+    sensor_grid,
+    solve_linear_ode,
+)
+
+
+def test_sensor_grid_endpoints_and_shape():
+    g = sensor_grid(100)
+    assert g.shape == (100,)
+    assert g[0] == 0.0 and g[-1] == 1.0
+
+
+def test_fine_grid_contains_sensor_grid_exactly():
+    g = sensor_grid(100)
+    tf = fine_grid(100, refine=10)
+    assert tf.shape == (991,)
+    np.testing.assert_array_equal(tf[::10], g)
+
+
+@pytest.mark.parametrize("k", [0.1, 0.7, 2.0])
+def test_constant_forcing_matches_closed_form(k):
+    tf = fine_grid()
+    c = 1.5
+    f = np.full((1, tf.size), c)
+    u = solve_linear_ode(f, np.array([k]), tf)
+    expected = (c / k) * (1.0 - np.exp(-k * tf))
+    np.testing.assert_allclose(u[0], expected, atol=1e-5)
+
+
+def test_zero_k_unit_forcing_gives_identity():
+    tf = fine_grid()
+    f = np.ones((1, tf.size))
+    u = solve_linear_ode(f, np.array([0.0]), tf)
+    np.testing.assert_allclose(u[0], tf, atol=1e-12)
+
+
+def test_solver_initial_condition_is_zero_for_random_f():
+    rng = np.random.default_rng(1)
+    tf = fine_grid()
+    f = sample_grf(rng, 5, tf)
+    u = solve_linear_ode(f, rng.uniform(0.1, 2.0, 5), tf)
+    assert u.shape == (5, tf.size)
+    np.testing.assert_array_equal(u[:, 0], 0.0)
+
+
+def test_grf_shape_and_unit_variance():
+    rng = np.random.default_rng(0)
+    tf = fine_grid()
+    f = sample_grf(rng, 2000, tf)
+    assert f.shape == (2000, 991)
+    assert abs(f.std() - 1.0) < 0.1
+    assert abs(f.mean()) < 0.1
+
+
+def test_make_split_shapes_dtypes_and_determinism():
+    a = make_split(np.random.default_rng(3), 12)
+    b = make_split(np.random.default_rng(3), 12)
+    assert a["f_sensors"].shape == (12, 100)
+    assert a["k"].shape == (12,)
+    assert a["t"].shape == (12, 100)
+    assert a["u"].shape == (12, 100)
+    for key in ("f_sensors", "k", "t", "u"):
+        assert a[key].dtype == np.float32
+        np.testing.assert_array_equal(a[key], b[key])
+    assert a["k"].min() >= 0.1 and a["k"].max() <= 2.0
+    np.testing.assert_array_equal(a["t"][0], sensor_grid(100).astype(np.float32))
