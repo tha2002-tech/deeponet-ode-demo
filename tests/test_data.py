@@ -70,3 +70,33 @@ def test_make_split_shapes_dtypes_and_determinism():
         np.testing.assert_array_equal(a[key], b[key])
     assert a["k"].min() >= 0.1 and a["k"].max() <= 2.0
     np.testing.assert_array_equal(a["t"][0], sensor_grid(100).astype(np.float32))
+
+
+import pyarrow as pa  # noqa: E402
+import pyarrow.parquet as pq  # noqa: E402
+
+from deeponet_ode.data import COLUMNS, load_split, save_split  # noqa: E402
+
+
+def test_parquet_round_trip_and_schema(tmp_path):
+    split = make_split(np.random.default_rng(5), 7)
+    path = tmp_path / "x.parquet"
+    save_split(split, path)
+
+    schema = pq.read_schema(path)
+    assert schema.names == list(COLUMNS)
+    assert schema.field("k").type == pa.float32()
+    for name in ("f_sensors", "t", "u"):
+        assert pa.types.is_list(schema.field(name).type)
+        assert schema.field(name).type.value_type == pa.float32()
+
+    back = load_split(path)
+    for key in COLUMNS:
+        assert back[key].dtype == np.float32
+        np.testing.assert_array_equal(back[key], split[key])
+
+
+def test_parquet_is_byte_identical_for_same_seed(tmp_path):
+    for i in range(2):
+        save_split(make_split(np.random.default_rng(9), 5), tmp_path / f"{i}.parquet")
+    assert (tmp_path / "0.parquet").read_bytes() == (tmp_path / "1.parquet").read_bytes()

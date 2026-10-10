@@ -5,7 +5,11 @@ All functions are pure numpy and deterministic given a numpy Generator.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 K_RANGE = (0.1, 2.0)
 LENGTH_SCALE = 0.2
@@ -88,4 +92,43 @@ def make_split(
         "k": k.astype(np.float32),
         "t": np.broadcast_to(sensors, (n, m)).astype(np.float32),
         "u": u_fine[:, ::refine].astype(np.float32),
+    }
+
+
+COLUMNS = ("f_sensors", "k", "t", "u")
+
+
+def _list_column(arr: np.ndarray) -> pa.ListArray:
+    arr = np.ascontiguousarray(arr, dtype=np.float32)
+    n, width = arr.shape
+    offsets = pa.array(np.arange(0, n * width + 1, width, dtype=np.int32))
+    return pa.ListArray.from_arrays(offsets, pa.array(arr.ravel(), type=pa.float32()))
+
+
+def save_split(split: dict[str, np.ndarray], path: str | Path) -> None:
+    """Write a split to Parquet: f_sensors/t/u as list<float32>, k as float32."""
+    table = pa.table(
+        {
+            "f_sensors": _list_column(split["f_sensors"]),
+            "k": pa.array(np.asarray(split["k"], dtype=np.float32), type=pa.float32()),
+            "t": _list_column(split["t"]),
+            "u": _list_column(split["u"]),
+        }
+    )
+    pq.write_table(table, str(path), compression="zstd")
+
+
+def _list_to_array(column: pa.ChunkedArray) -> np.ndarray:
+    col = column.combine_chunks()
+    return col.flatten().to_numpy(zero_copy_only=False).reshape(len(col), -1).astype(np.float32)
+
+
+def load_split(path: str | Path) -> dict[str, np.ndarray]:
+    """Read a Parquet file written by save_split back into float32 arrays."""
+    table = pq.read_table(str(path))
+    return {
+        "f_sensors": _list_to_array(table.column("f_sensors")),
+        "k": table.column("k").to_numpy().astype(np.float32),
+        "t": _list_to_array(table.column("t")),
+        "u": _list_to_array(table.column("u")),
     }
